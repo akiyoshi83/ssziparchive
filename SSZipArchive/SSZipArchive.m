@@ -23,6 +23,7 @@
 @implementation SSZipArchive {
 	NSString *_path;
 	NSString *_filename;
+	NSStringEncoding _encoding;
     zipFile _zip;
 }
 
@@ -328,10 +329,16 @@
 
 
 + (BOOL)createZipFileAtPath:(NSString *)path withContentsOfDirectory:(NSString *)directoryPath {
+    return [self createZipFileAtPath:path withContentsOfDirectory:directoryPath withEncode:NSUTF8StringEncoding];
+}
+
+
++ (BOOL)createZipFileAtPath:(NSString *)path withContentsOfDirectory:(NSString *)directoryPath withEncode:(NSStringEncoding)encoding
+{
     BOOL success = NO;
 
     NSFileManager *fileManager = nil;
-	SSZipArchive *zipArchive = [[SSZipArchive alloc] initWithPath:path];
+	SSZipArchive *zipArchive = [[SSZipArchive alloc] initWithPath:path withEncoding:encoding];
 
 	if ([zipArchive open]) {
         // use a local filemanager (queue/thread compatibility)
@@ -360,12 +367,16 @@
 
 
 - (id)initWithPath:(NSString *)path {
+	return [self initWithPath:path withEncoding:NSUTF8StringEncoding];
+}
+
+- (id)initWithPath:(NSString *)path withEncoding:(NSStringEncoding)encoding {
 	if ((self = [super init])) {
 		_path = [path copy];
+		_encoding = encoding;
 	}
 	return self;
 }
-
 
 #if !__has_feature(objc_arc)
 - (void)dealloc {
@@ -413,10 +424,10 @@
 
     const char *afileName;
     if (!fileName) {
-        afileName = [path.lastPathComponent UTF8String];
+        afileName = [path.lastPathComponent cStringUsingEncoding:_encoding];
     }
     else {
-        afileName = [fileName UTF8String];
+        afileName = [fileName cStringUsingEncoding:_encoding];
     }
 
     zip_fileinfo zipInfo = {{0}};
