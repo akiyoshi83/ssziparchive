@@ -23,6 +23,7 @@
 @implementation SSZipArchive {
 	NSString *_path;
 	NSString *_filename;
+	NSString *_passowrd;
 	NSStringEncoding _encoding;
     zipFile _zip;
 }
@@ -329,22 +330,40 @@
 
 
 + (BOOL)createZipFileAtPath:(NSString *)path withContentsOfDirectory:(NSString *)directoryPath {
-    return [self createZipFileAtPath:path withContentsOfDirectory:directoryPath withEncode:NSUTF8StringEncoding];
+	return [self createZipFileAtPath:path
+			withContentsOfDirectory:directoryPath
+			withPassword:nil
+			withEncode:NSUTF8StringEncoding];
 }
 
 
-+ (BOOL)createZipFileAtPath:(NSString *)path withContentsOfDirectory:(NSString *)directoryPath withEncode:(NSStringEncoding)encoding
-{
-    BOOL success = NO;
++ (BOOL)createZipFileAtPath:(NSString *)path withContentsOfDirectory:(NSString *)directoryPath withPassword:(NSString *)password {
+    return [self createZipFileAtPath:path
+			withContentsOfDirectory:directoryPath
+			withPassword:password
+			withEncode:NSUTF8StringEncoding];
+}
 
+
++ (BOOL)createZipFileAtPath:(NSString *)path withContentsOfDirectory:(NSString *)directoryPath withEncode:(NSStringEncoding)encoding {
+    return [self createZipFileAtPath:path
+			withContentsOfDirectory:directoryPath
+			withPassword:nil
+			withEncode:encoding];
+}
+
+
++ (BOOL)createZipFileAtPath:(NSString *)path withContentsOfDirectory:(NSString *)directoryPath withPassword:(NSString *)password withEncode:(NSStringEncoding)encoding {
+	BOOL success = NO;
+	
     NSFileManager *fileManager = nil;
-	SSZipArchive *zipArchive = [[SSZipArchive alloc] initWithPath:path withEncoding:encoding];
-
+	SSZipArchive *zipArchive = [[SSZipArchive alloc] initWithPath:path withPassword:password withEncoding:encoding];
+	
 	if ([zipArchive open]) {
         // use a local filemanager (queue/thread compatibility)
         fileManager = [[NSFileManager alloc] init];
         NSDirectoryEnumerator *dirEnumerator = [fileManager enumeratorAtPath:directoryPath];
-
+		
 		NSString *fileName;
         while ((fileName = [dirEnumerator nextObject])) {
             BOOL isDir;
@@ -356,23 +375,24 @@
         }
         success = [zipArchive close];
 	}
-
+	
 #if !__has_feature(objc_arc)
     [fileManager release];
 	[zipArchive release];
 #endif
-
+	
 	return success;
 }
 
 
 - (id)initWithPath:(NSString *)path {
-	return [self initWithPath:path withEncoding:NSUTF8StringEncoding];
+	return [self initWithPath:path withPassword:nil withEncoding:NSUTF8StringEncoding];
 }
 
-- (id)initWithPath:(NSString *)path withEncoding:(NSStringEncoding)encoding {
+- (id)initWithPath:(NSString *)path withPassword:(NSString *)passowrd withEncoding:(NSStringEncoding)encoding {
 	if ((self = [super init])) {
-		_path = [path copy];
+		_path     = [path copy];
+		_passowrd = [passowrd copy];
 		_encoding = encoding;
 	}
 	return self;
@@ -381,6 +401,7 @@
 #if !__has_feature(objc_arc)
 - (void)dealloc {
     [_path release];
+	[_path passowrd];
 	[super dealloc];
 }
 #endif
@@ -459,7 +480,17 @@
         }
     }
 
-    zipOpenNewFileInZip(_zip, afileName, &zipInfo, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_DEFAULT_COMPRESSION);
+	if([_passowrd length] > 0) {
+		const char* password = [_passowrd cStringUsingEncoding:NSASCIIStringEncoding];
+		
+		NSData* data = [NSData dataWithContentsOfFile:path];
+		uLong crcValue = crc32(0L, NULL, 0L);
+		crcValue = crc32(crcValue, (const Bytef*)[data bytes], (uInt)[data length]);
+		
+		zipOpenNewFileInZip3(_zip, afileName, &zipInfo, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_DEFAULT_COMPRESSION, 0, 15, 8, Z_DEFAULT_STRATEGY, password, crcValue);
+	} else {
+		zipOpenNewFileInZip(_zip, afileName, &zipInfo, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_DEFAULT_COMPRESSION);
+	}
 
 	void *buffer = malloc(CHUNK);
 	unsigned int len = 0;

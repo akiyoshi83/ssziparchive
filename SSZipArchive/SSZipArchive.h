@@ -26,11 +26,13 @@
 // Zip
 + (BOOL)createZipFileAtPath:(NSString *)path withFilesAtPaths:(NSArray *)filenames;
 + (BOOL)createZipFileAtPath:(NSString *)path withContentsOfDirectory:(NSString *)directoryPath;
++ (BOOL)createZipFileAtPath:(NSString *)path withContentsOfDirectory:(NSString *)directoryPath withPassword:(NSString *)password;
 + (BOOL)createZipFileAtPath:(NSString *)path withContentsOfDirectory:(NSString *)directoryPath withEncode:(NSStringEncoding)encoding;
++ (BOOL)createZipFileAtPath:(NSString *)path withContentsOfDirectory:(NSString *)directoryPath withPassword:(NSString *)password withEncode:(NSStringEncoding)encoding;
 
 
 - (id)initWithPath:(NSString *)path;
-- (id)initWithPath:(NSString *)path withEncoding:(NSStringEncoding)encoding;
+- (id)initWithPath:(NSString *)path withPassword:(NSString *)password withEncoding:(NSStringEncoding)encoding;
 - (BOOL)open;
 - (BOOL)writeFile:(NSString *)path;
 - (BOOL)writeData:(NSData *)data filename:(NSString *)filename;
